@@ -26,6 +26,6 @@ export const TourContext = createContext<TourContextValue | null>(null)
 
 export function useTourContext(): TourContextValue {
     const ctx = useContext(TourContext)
-    if (!ctx) throw new Error('react-native-onboarding-tour: wrap your app in <TourProvider>.')
+    if (!ctx) throw new Error('react-native-interactive-tour: wrap your app in <TourProvider>.')
     return ctx
 }
