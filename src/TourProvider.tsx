@@ -17,6 +17,7 @@ export function TourProvider({
     labels: labelsProp,
     targetTimeoutMs = 5000,
     pressAdvanceDelayMs = 150,
+    waitingGraceMs = 1200,
     renderTooltip,
     renderExtra,
     onTourStart,
@@ -31,6 +32,11 @@ export function TourProvider({
 
     const [active, setActive] = useState<ActiveState | null>(null)
     const [rect, setRect] = useState<Rect | null>(null)
+    // Bumped when the active step's target unmounts (e.g. the user navigated back)
+    // so the activation effect re-arms its wait-for-target flow.
+    const [waitRevision, setWaitRevision] = useState(0)
+    // Prevents duplicate onStepChange announcements when the effect re-arms.
+    const lastAnnouncedStep = useRef('')
 
     const targets = useRef(new Map<string, RefObject<View | null>>())
     const registrationListeners = useRef(new Set<(id: string) => void>())
@@ -102,6 +108,7 @@ export function TourProvider({
         (tourId: string, steps: TourStep[], options?: { startAt?: number }) => {
             if (!steps.length) return
             const stepIndex = Math.min(Math.max(options?.startAt ?? 0, 0), steps.length - 1)
+            lastAnnouncedStep.current = ''
             goToStep({ tourId, steps, stepIndex })
             callbacksRef.current.onTourStart?.(tourId)
         },
@@ -113,7 +120,11 @@ export function TourProvider({
         if (!active) return
         const token = activationToken.current
         const step = active.steps[active.stepIndex]
-        callbacksRef.current.onStepChange?.(active.tourId, active.stepIndex, step)
+        const stepKey = `${active.tourId}:${active.stepIndex}`
+        if (lastAnnouncedStep.current !== stepKey) {
+            lastAnnouncedStep.current = stepKey
+            callbacksRef.current.onStepChange?.(active.tourId, active.stepIndex, step)
+        }
 
         // Target-less intro/modal step — nothing to measure or wait for.
         if (!step.target) return
@@ -140,7 +151,7 @@ export function TourProvider({
             clearTimeout(timeout)
             registrationListeners.current.delete(onRegistered)
         }
-    }, [active, measureStep, next, targetTimeoutMs])
+    }, [active, waitRevision, measureStep, next, targetTimeoutMs])
 
     const registerTarget = useCallback((id: string, ref: RefObject<View | null>) => {
         targets.current.set(id, ref)
@@ -149,6 +160,14 @@ export function TourProvider({
 
     const unregisterTarget = useCallback((id: string) => {
         targets.current.delete(id)
+        // If the active step's target just unmounted (screen popped / user went
+        // back), drop the stale spotlight and re-enter the wait-for-target flow —
+        // the overlay's grace timer then hides it and releases touches.
+        const current = activeRef.current
+        if (current && current.steps[current.stepIndex].target === id) {
+            setRect(null)
+            setWaitRevision(revision => revision + 1)
+        }
     }, [])
 
     const notifyTargetEvent = useCallback(
@@ -199,6 +218,7 @@ export function TourProvider({
                         labels={labels}
                         renderTooltip={renderTooltip}
                         renderExtra={renderExtra}
+                        waitingGraceMs={waitingGraceMs}
                         next={next}
                         back={back}
                         stop={stop}

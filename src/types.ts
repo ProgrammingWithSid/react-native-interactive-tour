@@ -23,6 +23,13 @@ export interface TourStep {
     radius?: number
     /** Tooltip placement relative to the spotlight. Default: 'auto'. */
     tooltipPlacement?: 'auto' | 'above' | 'below'
+    /**
+     * 'spotlight' (default) — dim + touch blockers; only the target is usable.
+     * 'free' — no dim, no blockers: a ring marks the target and the tooltip
+     * guides, but the WHOLE screen stays interactive (forms, lists, scrolling).
+     * Use for steps where the user must work the screen before continuing.
+     */
+    mode?: 'spotlight' | 'free'
 }
 
 export interface Rect {
@@ -87,6 +94,12 @@ export interface TourProviderProps {
     targetTimeoutMs?: number
     /** Ms between a 'target-press' tap and advancing, so the target's own onPress runs first. Default: 150. */
     pressAdvanceDelayMs?: number
+    /**
+     * Ms a step's target may stay unmounted (normal screen transition) before the
+     * overlay hides and stops blocking touches — the user left the guided path
+     * (e.g. pressed back). The tour resumes if the target reappears. Default: 1200.
+     */
+    waitingGraceMs?: number
     /** Replace the default tooltip entirely. */
     renderTooltip?: (api: TooltipApi) => ReactNode
     /**

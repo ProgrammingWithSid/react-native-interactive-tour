@@ -1,11 +1,10 @@
 {
     "name": "driver-native",
-    "description": "driver.js-style product tours for React Native — animated spotlight, tooltips, interactive steps. Pure JS, Fabric-ready, zero native code.",
-    "version": "0.1.2",
+    "description": "driver.js-style product tours for React Native \u2014 animated spotlight, tooltips, interactive steps. Pure JS, Fabric-ready, zero native code.",
+    "version": "0.1.5",
     "main": "dist/index.js",
     "types": "dist/index.d.ts",
-    "author": "neilveil",
-    "repository": "neilveil/driver-native",
+    "author": "Satender Kumar",
     "license": "MIT",
     "scripts": {
         "dist": "rimraf dist && tsc",

@@ -25,12 +25,24 @@ interface TourOverlayProps {
     labels: TourLabels
     renderTooltip?: (api: TooltipApi) => ReactNode
     renderExtra?: (api: TooltipApi) => ReactNode
+    waitingGraceMs: number
     next: () => void
     back: () => void
     stop: () => void
 }
 
-export function TourOverlay({ active, rect, theme, labels, renderTooltip, renderExtra, next, back, stop }: TourOverlayProps) {
+export function TourOverlay({
+    active,
+    rect,
+    theme,
+    labels,
+    renderTooltip,
+    renderExtra,
+    waitingGraceMs,
+    next,
+    back,
+    stop
+}: TourOverlayProps) {
     const window = useWindowDimensions()
     // Actual laid-out size of the overlay (can differ from the window on Android
     // depending on system bars); window dimensions are only the pre-layout fallback.
@@ -58,6 +70,19 @@ export function TourOverlay({ active, rect, theme, labels, renderTooltip, render
 
     // Intro/modal step: no target — full dim, centered tooltip.
     const isIntro = !active.step.target
+
+    // When a step's target stays unmounted beyond the grace window, the user has
+    // left the guided path (e.g. pressed back). Hide the overlay and release all
+    // touches — the tour resumes automatically if the target shows up again.
+    const [suppressed, setSuppressed] = useState(false)
+    useEffect(() => {
+        if (rect || isIntro) {
+            setSuppressed(false)
+            return
+        }
+        const timeout = setTimeout(() => setSuppressed(true), waitingGraceMs)
+        return () => clearTimeout(timeout)
+    }, [rect, isIntro, active.tourId, active.stepIndex, waitingGraceMs])
 
     const hx = useSharedValue(W / 2)
     const hy = useSharedValue(H * 0.45)
@@ -109,11 +134,22 @@ export function TourOverlay({ active, rect, theme, labels, renderTooltip, render
 
     const topBlocker = useAnimatedStyle(() => ({ left: 0, right: 0, top: 0, height: Math.max(hy.value, 0) }))
     const bottomBlocker = useAnimatedStyle(() => ({ left: 0, right: 0, top: hy.value + hh.value, bottom: 0 }))
-    const leftBlocker = useAnimatedStyle(() => ({ left: 0, top: hy.value, width: Math.max(hx.value, 0), height: hh.value }))
-    const rightBlocker = useAnimatedStyle(() => ({ left: hx.value + hw.value, right: 0, top: hy.value, height: hh.value }))
+    const leftBlocker = useAnimatedStyle(() => ({
+        left: 0,
+        top: hy.value,
+        width: Math.max(hx.value, 0),
+        height: hh.value
+    }))
+    const rightBlocker = useAnimatedStyle(() => ({
+        left: hx.value + hw.value,
+        right: 0,
+        top: hy.value,
+        height: hh.value
+    }))
     const holeBlocker = useAnimatedStyle(() => ({ left: hx.value, top: hy.value, width: hw.value, height: hh.value }))
 
     const interactive = (active.step.advanceOn ?? 'next') === 'target-press'
+    const free = active.step.mode === 'free'
 
     const tooltipApi: TooltipApi = {
         step: active.step,
@@ -128,65 +164,91 @@ export function TourOverlay({ active, rect, theme, labels, renderTooltip, render
         stop
     }
 
-    // Tooltip placement from the JS-side rect (snaps per step; the spotlight itself springs).
+    // Tooltip placement from the JS-side rect (snaps per step; the spotlight itself
+    // springs). Pick the side with room; a tall target (e.g. a full-height strip)
+    // leaves no room above OR below — then center the tooltip over the dim instead
+    // of letting it overflow into the status bar.
+    const MIN_TOOLTIP_SPACE = 170
+    const TOP_SAFE = 60
+    const spaceBelow = adjustedRect ? H - (adjustedRect.y + adjustedRect.h) : 0
+    const spaceAbove = adjustedRect ? adjustedRect.y : 0
+    const forcedPlacement =
+        active.step.tooltipPlacement && active.step.tooltipPlacement !== 'auto' ? active.step.tooltipPlacement : null
     const placement =
-        active.step.tooltipPlacement && active.step.tooltipPlacement !== 'auto'
-            ? active.step.tooltipPlacement
-            : adjustedRect && adjustedRect.y + adjustedRect.h > H * 0.6
+        forcedPlacement ??
+        (spaceBelow >= MIN_TOOLTIP_SPACE || spaceBelow >= spaceAbove
+            ? spaceBelow >= MIN_TOOLTIP_SPACE
+                ? 'below'
+                : 'center'
+            : spaceAbove >= MIN_TOOLTIP_SPACE
               ? 'above'
-              : 'below'
+              : 'center')
     const tooltipStyle = isIntro
         ? { top: H * 0.3 }
         : adjustedRect === null
           ? { top: H * 0.4 }
           : placement === 'below'
-            ? { top: adjustedRect.y + adjustedRect.h + 16 }
-            : { bottom: H - adjustedRect.y + 16 }
+            ? { top: Math.min(adjustedRect.y + adjustedRect.h + 16, H - MIN_TOOLTIP_SPACE) }
+            : placement === 'above'
+              ? { bottom: Math.min(H - adjustedRect.y + 16, H - TOP_SAFE - MIN_TOOLTIP_SPACE) }
+              : { top: Math.max(TOP_SAFE, H * 0.3) }
 
     return (
-        <Animated.View
-            ref={rootRef}
-            onLayout={onRootLayout}
-            style={StyleSheet.absoluteFill}
-            entering={FadeIn.duration(200)}
-            exiting={FadeOut.duration(150)}
-            pointerEvents='box-none'
-        >
-            <Svg width={W} height={H} style={StyleSheet.absoluteFill} pointerEvents='none'>
-                <AnimatedPath animatedProps={dimProps} fill={theme.dimColor} fillRule='evenodd' />
-                <AnimatedPath animatedProps={ringProps} fill='none' stroke={theme.ringColor} strokeWidth={theme.ringWidth} />
-            </Svg>
-
-            {/* Touch blockers around the spotlight — the hole itself stays touchable on interactive steps. */}
-            <AnimatedBlocker style={topBlocker} />
-            <AnimatedBlocker style={bottomBlocker} />
-            <AnimatedBlocker style={leftBlocker} />
-            <AnimatedBlocker style={rightBlocker} />
-            {!interactive && <AnimatedBlocker style={holeBlocker} />}
-
-            {(adjustedRect !== null || isIntro) && (
+        <View ref={rootRef} onLayout={onRootLayout} style={StyleSheet.absoluteFill} pointerEvents='box-none'>
+            {!suppressed && (
                 <Animated.View
-                    key={`${active.tourId}:${active.stepIndex}`}
-                    entering={FadeIn.duration(180)}
-                    style={[styles.tooltipWrap, tooltipStyle]}
-                    pointerEvents='box-none'
-                >
-                    {renderTooltip ? renderTooltip(tooltipApi) : <DefaultTooltip api={tooltipApi} />}
-                </Animated.View>
-            )}
-
-            {/* App-provided decorations (mascots, illustrations) above the dim */}
-            {renderExtra && (
-                <Animated.View
-                    key={`extra:${active.tourId}:${active.stepIndex}`}
-                    entering={FadeIn.duration(250)}
                     style={StyleSheet.absoluteFill}
+                    entering={FadeIn.duration(200)}
+                    exiting={FadeOut.duration(150)}
                     pointerEvents='box-none'
                 >
-                    {renderExtra(tooltipApi)}
+                    <Svg width={W} height={H} style={StyleSheet.absoluteFill} pointerEvents='none'>
+                        {!free && <AnimatedPath animatedProps={dimProps} fill={theme.dimColor} fillRule='evenodd' />}
+                        <AnimatedPath
+                            animatedProps={ringProps}
+                            fill='none'
+                            stroke={theme.ringColor}
+                            strokeWidth={theme.ringWidth}
+                        />
+                    </Svg>
+
+                    {/* Touch blockers around the spotlight — the hole itself stays touchable on
+                        interactive steps. Free-mode steps block nothing at all. */}
+                    {!free && (
+                        <>
+                            <AnimatedBlocker style={topBlocker} />
+                            <AnimatedBlocker style={bottomBlocker} />
+                            <AnimatedBlocker style={leftBlocker} />
+                            <AnimatedBlocker style={rightBlocker} />
+                            {!interactive && <AnimatedBlocker style={holeBlocker} />}
+                        </>
+                    )}
+
+                    {(adjustedRect !== null || isIntro) && (
+                        <Animated.View
+                            key={`${active.tourId}:${active.stepIndex}`}
+                            entering={FadeIn.duration(180)}
+                            style={[styles.tooltipWrap, tooltipStyle]}
+                            pointerEvents='box-none'
+                        >
+                            {renderTooltip ? renderTooltip(tooltipApi) : <DefaultTooltip api={tooltipApi} />}
+                        </Animated.View>
+                    )}
+
+                    {/* App-provided decorations (mascots, illustrations) above the dim */}
+                    {renderExtra && (
+                        <Animated.View
+                            key={`extra:${active.tourId}:${active.stepIndex}`}
+                            entering={FadeIn.duration(250)}
+                            style={StyleSheet.absoluteFill}
+                            pointerEvents='box-none'
+                        >
+                            {renderExtra(tooltipApi)}
+                        </Animated.View>
+                    )}
                 </Animated.View>
             )}
-        </Animated.View>
+        </View>
     )
 }
 

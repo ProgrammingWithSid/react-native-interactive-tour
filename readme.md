@@ -80,6 +80,7 @@ tour.start('first-run', steps)
 | `labels` | `Next/Back/Skip/Done/…` | Button labels (i18n) |
 | `targetTimeoutMs` | `5000` | How long to wait for a step's target to mount before skipping the step |
 | `pressAdvanceDelayMs` | `150` | Delay after a `target-press` so the element's own `onPress` runs first |
+| `waitingGraceMs` | `1200` | If a step's target stays unmounted past this (user navigated away, e.g. back), the overlay hides and stops blocking touches; the tour resumes if the target reappears |
 | `renderTooltip` | built-in | `(api: TooltipApi) => ReactNode` — replace the tooltip entirely |
 | `renderExtra` | — | `(api: TooltipApi) => ReactNode` — extra content above the dim on any step (mascots, illustrations); return null for steps that need nothing |
 | `onTourStart` `onStepChange` `onTourComplete` `onTourSkip` `onStepTargetMissing` `onTargetPress` | — | Lifecycle callbacks — wire up analytics, haptics, persistence |
@@ -123,4 +124,4 @@ The library keeps no state. Persist progress yourself via callbacks:
 
 ## License
 
-MIT © Neil Arya
+MIT © Satender Kumar
