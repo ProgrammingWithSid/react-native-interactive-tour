@@ -1,6 +1,6 @@
 {
-    "name": "react-native-docent",
-    "description": "Your app\u2019s docent \u2014 guided product tours for React Native: animated spotlight, interactive steps, free-roam form steps, auto-scroll. Pure JS, Fabric-ready, zero native code.",
+    "name": "react-native-onboarding-tour",
+    "description": "Guided onboarding tours for React Native \u2014 animated spotlight, interactive tap-to-advance steps, free-roam form steps, auto-scroll. Pure JS, Fabric-ready, zero native code.",
     "version": "0.2.0",
     "main": "dist/index.js",
     "types": "dist/index.d.ts",

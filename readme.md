@@ -1,6 +1,6 @@
-# react-native-docent
+# react-native-onboarding-tour
 
-**Your app’s docent — guided product tours for React Native**, driver.js-style — animated spotlight, tooltips, interactive steps. Pure JS, Fabric-ready, zero native code.
+**Guided onboarding tours for React Native**, driver.js-style — animated spotlight, tooltips, interactive steps. Pure JS, Fabric-ready, zero native code.
 
 - 🔦 **Moving spotlight** — a dimmed overlay with a rounded cutout that *springs* from element to element, drawn as a single even-odd SVG path (renders correctly on the New Architecture, unlike `Mask`-based libraries)
 - 👆 **Interactive steps** — `advanceOn: 'target-press'` makes the user tap the *real* highlighted element; its own `onPress` runs (navigation, actions), then the tour advances
@@ -14,7 +14,7 @@
 ## Install
 
 ```sh
-npm install react-native-docent
+npm install react-native-onboarding-tour
 ```
 
 Peer dependencies (you likely have them already):
@@ -28,7 +28,7 @@ npx expo install react-native-svg react-native-reanimated
 **1. Wrap your app** (above your navigator, inside gesture/safe-area providers):
 
 ```tsx
-import { TourProvider } from 'react-native-docent'
+import { TourProvider } from 'react-native-onboarding-tour'
 
 export default function App() {
     return (
@@ -42,7 +42,7 @@ export default function App() {
 **2. Mark targets** — wrap any element a tour should spotlight:
 
 ```tsx
-import { TourTarget } from 'react-native-docent'
+import { TourTarget } from 'react-native-onboarding-tour'
 
 <TourTarget id='home.menu-button'>
     <MenuButton />
@@ -52,7 +52,7 @@ import { TourTarget } from 'react-native-docent'
 **3. Drive the tour:**
 
 ```tsx
-import { useTour, type TourStep } from 'react-native-docent'
+import { useTour, type TourStep } from 'react-native-onboarding-tour'
 
 const steps: TourStep[] = [
     {
