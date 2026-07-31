@@ -1,0 +1,54 @@
+{
+    "name": "driver-native",
+    "description": "driver.js-style product tours for React Native — animated spotlight, tooltips, interactive steps. Pure JS, Fabric-ready, zero native code.",
+    "version": "0.1.2",
+    "main": "dist/index.js",
+    "types": "dist/index.d.ts",
+    "author": "neilveil",
+    "repository": "neilveil/driver-native",
+    "license": "MIT",
+    "scripts": {
+        "dist": "rimraf dist && tsc",
+        "lint": "tsc --noEmit",
+        "prepublishOnly": "npm run dist"
+    },
+    "files": [
+        "dist",
+        "readme.md",
+        "license.txt"
+    ],
+    "peerDependencies": {
+        "react": ">=18",
+        "react-native": ">=0.72",
+        "react-native-reanimated": ">=3.6",
+        "react-native-svg": ">=13"
+    },
+    "devDependencies": {
+        "@types/react": "^19.1.0",
+        "react": "19.1.0",
+        "react-native": "0.81.4",
+        "react-native-reanimated": "~4.1.0",
+        "react-native-svg": "15.12.1",
+        "react-native-worklets": "0.5.1",
+        "rimraf": "^6.0.1",
+        "typescript": "^5.8.3"
+    },
+    "keywords": [
+        "react-native",
+        "expo",
+        "product-tour",
+        "tour",
+        "tourguide",
+        "walkthrough",
+        "onboarding",
+        "spotlight",
+        "coachmark",
+        "driver.js",
+        "driverjs",
+        "highlight",
+        "tooltip",
+        "copilot",
+        "fabric",
+        "new-architecture"
+    ]
+}
