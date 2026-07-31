@@ -92,6 +92,7 @@ tour.start('first-run', steps)
 | `target` | — | `TourTarget` id to spotlight; omit for an intro/modal step (full dim, centered tooltip, Next button) |
 | `title` / `text` | — | Tooltip content |
 | `advanceOn` | `'next'` | `'next'` (button) or `'target-press'` (tap the real element) |
+| `mode` | `'spotlight'` | `'spotlight'` (dim + blockers) or `'free'` (ring + tooltip only — the whole screen stays interactive; for steps where the user must fill a form or work a list before continuing) |
 | `padding` / `radius` | theme | Per-step spotlight overrides |
 | `tooltipPlacement` | `'auto'` | `'auto' \| 'above' \| 'below'` |
 
