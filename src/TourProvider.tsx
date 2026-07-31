@@ -160,7 +160,13 @@ export function TourProvider({
         const timeout = setTimeout(() => {
             if (token !== activationToken.current) return
             callbacksRef.current.onStepTargetMissing?.(active.tourId, step)
-            next()
+            // A tour must only COMPLETE when the user actually reaches its final
+            // step. Ending on a missing-target timeout means the user left the
+            // guided path (e.g. backed out and the remaining steps cascaded) —
+            // that is a skip, so the app can offer the tour again.
+            const current = activeRef.current
+            if (current && current.stepIndex >= current.steps.length - 1) finish('skip')
+            else next()
         }, targetTimeoutMs)
 
         const onRegistered = (id: string) => {
@@ -177,7 +183,7 @@ export function TourProvider({
             clearTimeout(timeout)
             registrationListeners.current.delete(onRegistered)
         }
-    }, [active, waitRevision, measureStep, next, targetTimeoutMs])
+    }, [active, waitRevision, measureStep, next, finish, targetTimeoutMs])
 
     const registerTarget = useCallback((id: string, ref: RefObject<View | null>, options?: TargetOptions) => {
         targets.current.set(id, { ref, options })
