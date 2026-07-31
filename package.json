@@ -1,6 +1,6 @@
 {
-    "name": "driver-native",
-    "description": "driver.js-style product tours for React Native — animated spotlight, tooltips, interactive steps. Pure JS, Fabric-ready, zero native code.",
+    "name": "react-native-docent",
+    "description": "Your app\u2019s docent \u2014 guided product tours for React Native: animated spotlight, interactive steps, free-roam form steps, auto-scroll. Pure JS, Fabric-ready, zero native code.",
     "version": "0.2.0",
     "main": "dist/index.js",
     "types": "dist/index.d.ts",

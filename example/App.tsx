@@ -1,6 +1,6 @@
 import { useState } from 'react'
 import { Pressable, StyleSheet, Text, View } from 'react-native'
-import { TourProvider, TourTarget, useTour, type TourStep } from 'driver-native'
+import { TourProvider, TourTarget, useTour, type TourStep } from 'react-native-docent'
 
 // Two fake "screens" to demonstrate a cross-screen tour without a navigation library.
 export default function App() {
@@ -34,7 +34,7 @@ function Demo() {
     return screen === 'home' ? (
         <View style={styles.screen}>
             <TourTarget id='home.title'>
-                <Text style={styles.title}>driver-native example</Text>
+                <Text style={styles.title}>react-native-docent example</Text>
             </TourTarget>
 
             <Pressable style={styles.button} onPress={() => tour.start('demo', steps)}>
