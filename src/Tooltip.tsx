@@ -22,7 +22,7 @@ export function DefaultTooltip({ api }: { api: TooltipApi }) {
                         ))}
                     </View>
                 )}
-                <Pressable onPress={stop} hitSlop={12}>
+                <Pressable onPress={stop} hitSlop={12} accessibilityRole='button' accessibilityLabel={labels.skip}>
                     <Text style={[styles.skip, { color: t.secondaryTextColor }]}>{labels.skip}</Text>
                 </Pressable>
             </View>
@@ -32,7 +32,7 @@ export function DefaultTooltip({ api }: { api: TooltipApi }) {
 
             <View style={styles.footer}>
                 {!isFirst ? (
-                    <Pressable onPress={back} hitSlop={8}>
+                    <Pressable onPress={back} hitSlop={8} accessibilityRole='button' accessibilityLabel={labels.back}>
                         <Text style={[styles.back, { color: t.secondaryTextColor }]}>{labels.back}</Text>
                     </Pressable>
                 ) : (
@@ -44,6 +44,8 @@ export function DefaultTooltip({ api }: { api: TooltipApi }) {
                 ) : (
                     <Pressable
                         onPress={next}
+                        accessibilityRole='button'
+                        accessibilityLabel={isLast ? labels.done : labels.next}
                         style={[styles.button, { backgroundColor: t.buttonColor, borderRadius: t.borderRadius / 1.6 }]}
                     >
                         <Text style={[styles.buttonText, { color: t.buttonTextColor }]}>{isLast ? labels.done : labels.next}</Text>

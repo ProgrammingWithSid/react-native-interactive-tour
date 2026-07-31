@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useMemo, useRef, useState, type RefObject } from 'react'
-import { StyleSheet, View } from 'react-native'
-import { TourContext, type TargetEvent, type TourContextValue } from './context'
+import { Dimensions, StyleSheet, View } from 'react-native'
+import { TourContext, type TargetEvent, type TargetOptions, type TourContextValue } from './context'
 import { defaultLabels, mergeTheme } from './theme'
 import { TourOverlay } from './TourOverlay'
 import type { ActiveTour, Rect, TourProviderProps, TourStep } from './types'
@@ -18,6 +18,7 @@ export function TourProvider({
     targetTimeoutMs = 5000,
     pressAdvanceDelayMs = 150,
     waitingGraceMs = 1200,
+    dismissOnBack = false,
     renderTooltip,
     renderExtra,
     onTourStart,
@@ -38,7 +39,9 @@ export function TourProvider({
     // Prevents duplicate onStepChange announcements when the effect re-arms.
     const lastAnnouncedStep = useRef('')
 
-    const targets = useRef(new Map<string, RefObject<View | null>>())
+    const targets = useRef(new Map<string, { ref: RefObject<View | null>; options?: TargetOptions }>())
+    // At most one scroll request per step activation
+    const scrollRequestedToken = useRef(-1)
     const registrationListeners = useRef(new Set<(id: string) => void>())
     // Guards stale async callbacks (measure/timeout) after the step has moved on.
     const activationToken = useRef(0)
@@ -53,12 +56,32 @@ export function TourProvider({
     const measureStep = useCallback(
         (step: TourStep, token: number) => {
             if (!step.target) return false
-            const ref = targets.current.get(step.target)
-            const node = ref?.current
+            const entry = targets.current.get(step.target)
+            const node = entry?.ref.current
             if (!node) return false
+
+            const requestScroll = () => {
+                if (scrollRequestedToken.current === token) return
+                scrollRequestedToken.current = token
+                entry?.options?.onRequestScroll?.()
+                // Scrolling fires no layout events on the target — re-measure once
+                // the scroll animation has settled (and once more to be safe).
+                setTimeout(() => token === activationToken.current && measureStepRef.current?.(step, token), 400)
+                setTimeout(() => token === activationToken.current && measureStepRef.current?.(step, token), 900)
+            }
+
             node.measureInWindow((x, y, w, h) => {
                 if (token !== activationToken.current) return
-                if (!(w > 0) || !(h > 0)) return
+                if (!(w > 0) || !(h > 0)) {
+                    requestScroll()
+                    return
+                }
+                const windowSize = Dimensions.get('window')
+                const offscreen = y + h < 0 || y > windowSize.height - 24 || x + w < 0 || x > windowSize.width - 24
+                if (offscreen) {
+                    requestScroll()
+                    return
+                }
                 const padding = step.padding ?? theme.spotlightPadding
                 setRect({
                     x: x - padding,
@@ -72,6 +95,9 @@ export function TourProvider({
         },
         [theme]
     )
+    // Self-reference so the delayed re-measures above always call the latest closure.
+    const measureStepRef = useRef<typeof measureStep | null>(null)
+    measureStepRef.current = measureStep
 
     const goToStep = useCallback((state: ActiveState | null) => {
         activationToken.current += 1
@@ -153,8 +179,8 @@ export function TourProvider({
         }
     }, [active, waitRevision, measureStep, next, targetTimeoutMs])
 
-    const registerTarget = useCallback((id: string, ref: RefObject<View | null>) => {
-        targets.current.set(id, ref)
+    const registerTarget = useCallback((id: string, ref: RefObject<View | null>, options?: TargetOptions) => {
+        targets.current.set(id, { ref, options })
         registrationListeners.current.forEach(listener => listener(id))
     }, [])
 
@@ -219,6 +245,7 @@ export function TourProvider({
                         renderTooltip={renderTooltip}
                         renderExtra={renderExtra}
                         waitingGraceMs={waitingGraceMs}
+                        dismissOnBack={dismissOnBack}
                         next={next}
                         back={back}
                         stop={stop}

@@ -100,6 +100,8 @@ export interface TourProviderProps {
      * (e.g. pressed back). The tour resumes if the target reappears. Default: 1200.
      */
     waitingGraceMs?: number
+    /** Android: hardware back closes the tour (counts as skip). Default: false. */
+    dismissOnBack?: boolean
     /** Replace the default tooltip entirely. */
     renderTooltip?: (api: TooltipApi) => ReactNode
     /**

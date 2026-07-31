@@ -1,7 +1,7 @@
 {
     "name": "driver-native",
-    "description": "driver.js-style product tours for React Native \u2014 animated spotlight, tooltips, interactive steps. Pure JS, Fabric-ready, zero native code.",
-    "version": "0.1.5",
+    "description": "driver.js-style product tours for React Native — animated spotlight, tooltips, interactive steps. Pure JS, Fabric-ready, zero native code.",
+    "version": "0.2.0",
     "main": "dist/index.js",
     "types": "dist/index.d.ts",
     "author": "Satender Kumar",
@@ -9,7 +9,8 @@
     "scripts": {
         "dist": "rimraf dist && tsc",
         "lint": "tsc --noEmit",
-        "prepublishOnly": "npm run dist"
+        "prepublishOnly": "npm run dist",
+        "test": "jest"
     },
     "files": [
         "dist",
@@ -30,7 +31,10 @@
         "react-native-svg": "15.12.1",
         "react-native-worklets": "0.5.1",
         "rimraf": "^6.0.1",
-        "typescript": "^5.8.3"
+        "typescript": "^5.8.3",
+        "jest": "^29.7.0",
+        "ts-jest": "^29.2.5",
+        "@types/jest": "^29.5.14"
     },
     "keywords": [
         "react-native",

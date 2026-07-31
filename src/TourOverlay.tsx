@@ -1,5 +1,13 @@
 import { useEffect, useMemo, useRef, useState, type ReactNode } from 'react'
-import { Pressable, StyleSheet, View, useWindowDimensions, type LayoutChangeEvent } from 'react-native'
+import {
+    AccessibilityInfo,
+    BackHandler,
+    Pressable,
+    StyleSheet,
+    View,
+    useWindowDimensions,
+    type LayoutChangeEvent
+} from 'react-native'
 import Animated, {
     FadeIn,
     FadeOut,
@@ -11,6 +19,7 @@ import Animated, {
 } from 'react-native-reanimated'
 import Svg, { Path, type PathProps } from 'react-native-svg'
 import { roundedRectPath } from './geometry'
+import { computeTooltipLayout } from './placement'
 import { DefaultTooltip } from './Tooltip'
 import type { ActiveTour, Rect, TooltipApi, TourLabels, TourTheme } from './types'
 
@@ -26,6 +35,7 @@ interface TourOverlayProps {
     renderTooltip?: (api: TooltipApi) => ReactNode
     renderExtra?: (api: TooltipApi) => ReactNode
     waitingGraceMs: number
+    dismissOnBack: boolean
     next: () => void
     back: () => void
     stop: () => void
@@ -39,6 +49,7 @@ export function TourOverlay({
     renderTooltip,
     renderExtra,
     waitingGraceMs,
+    dismissOnBack,
     next,
     back,
     stop
@@ -146,7 +157,12 @@ export function TourOverlay({
         top: hy.value,
         height: hh.value
     }))
-    const holeBlocker = useAnimatedStyle(() => ({ left: hx.value, top: hy.value, width: hw.value, height: hh.value }))
+    const holeBlocker = useAnimatedStyle(() => ({
+        left: hx.value,
+        top: hy.value,
+        width: hw.value,
+        height: hh.value
+    }))
 
     const interactive = (active.step.advanceOn ?? 'next') === 'target-press'
     const free = active.step.mode === 'free'
@@ -164,34 +180,23 @@ export function TourOverlay({
         stop
     }
 
-    // Tooltip placement from the JS-side rect (snaps per step; the spotlight itself
-    // springs). Pick the side with room; a tall target (e.g. a full-height strip)
-    // leaves no room above OR below — then center the tooltip over the dim instead
-    // of letting it overflow into the status bar.
-    const MIN_TOOLTIP_SPACE = 170
-    const TOP_SAFE = 60
-    const spaceBelow = adjustedRect ? H - (adjustedRect.y + adjustedRect.h) : 0
-    const spaceAbove = adjustedRect ? adjustedRect.y : 0
-    const forcedPlacement =
-        active.step.tooltipPlacement && active.step.tooltipPlacement !== 'auto' ? active.step.tooltipPlacement : null
-    const placement =
-        forcedPlacement ??
-        (spaceBelow >= MIN_TOOLTIP_SPACE || spaceBelow >= spaceAbove
-            ? spaceBelow >= MIN_TOOLTIP_SPACE
-                ? 'below'
-                : 'center'
-            : spaceAbove >= MIN_TOOLTIP_SPACE
-              ? 'above'
-              : 'center')
-    const tooltipStyle = isIntro
-        ? { top: H * 0.3 }
-        : adjustedRect === null
-          ? { top: H * 0.4 }
-          : placement === 'below'
-            ? { top: Math.min(adjustedRect.y + adjustedRect.h + 16, H - MIN_TOOLTIP_SPACE) }
-            : placement === 'above'
-              ? { bottom: Math.min(H - adjustedRect.y + 16, H - TOP_SAFE - MIN_TOOLTIP_SPACE) }
-              : { top: Math.max(TOP_SAFE, H * 0.3) }
+    // Screen-reader users hear each step as it appears.
+    useEffect(() => {
+        const message = [active.step.title, active.step.text].filter(Boolean).join('. ')
+        if (message) AccessibilityInfo.announceForAccessibility(message)
+    }, [active.tourId, active.stepIndex, active.step.title, active.step.text])
+
+    // Optional: Android hardware back closes the tour instead of navigating.
+    useEffect(() => {
+        if (!dismissOnBack) return
+        const subscription = BackHandler.addEventListener('hardwareBackPress', () => {
+            stop()
+            return true
+        })
+        return () => subscription.remove()
+    }, [dismissOnBack, stop])
+
+    const tooltipStyle = computeTooltipLayout(adjustedRect, isIntro, H, active.step.tooltipPlacement).style
 
     return (
         <View ref={rootRef} onLayout={onRootLayout} style={StyleSheet.absoluteFill} pointerEvents='box-none'>

@@ -1,11 +1,13 @@
-import { useEffect, useRef, type ReactNode } from 'react'
+import { type ReactNode } from 'react'
 import { View, type StyleProp, type ViewStyle } from 'react-native'
-import { useTourContext } from './context'
+import { useTourTarget } from './useTourTarget'
 
 interface TourTargetProps {
     id: string
     children: ReactNode
     style?: StyleProp<ViewStyle>
+    /** Bring the target on-screen when its step activates off-screen (see scrollTargetIntoView). */
+    onRequestScroll?: () => void
 }
 
 /**
@@ -13,23 +15,20 @@ interface TourTargetProps {
  * View (collapsable={false} so it stays measurable on Android) and reports
  * layout changes and taps to the tour engine. It never intercepts or blocks
  * the child's own touch handling.
+ *
+ * Prefer useTourTarget() when a wrapper View would disturb the layout
+ * (flex rows, absolutely positioned elements, list cells).
  */
-export function TourTarget({ id, children, style }: TourTargetProps) {
-    const { registerTarget, unregisterTarget, notifyTargetEvent } = useTourContext()
-    const ref = useRef<View>(null)
-
-    useEffect(() => {
-        registerTarget(id, ref)
-        return () => unregisterTarget(id)
-    }, [id, registerTarget, unregisterTarget])
+export function TourTarget({ id, children, style, onRequestScroll }: TourTargetProps) {
+    const target = useTourTarget(id, { onRequestScroll })
 
     return (
         <View
-            ref={ref}
+            ref={target.ref}
             collapsable={false}
             style={style}
-            onLayout={() => notifyTargetEvent(id, 'layout')}
-            onTouchEndCapture={() => notifyTargetEvent(id, 'press')}
+            onLayout={target.onLayout}
+            onTouchEndCapture={target.onTouchEndCapture}
         >
             {children}
         </View>

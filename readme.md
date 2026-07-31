@@ -8,6 +8,8 @@
 - 🪶 **Zero native code, zero hard dependencies** — peer deps only: `react-native-svg` + `react-native-reanimated`. Works in Expo (including Expo Go) and bare RN
 - 🎨 **Fully themeable** — colors, radii, labels, or replace the whole tooltip with `renderTooltip`
 - 📊 **App-owned side effects** — analytics, haptics, and persistence plug in via callbacks; the library stores nothing
+- 📜 **Auto-scroll** — a target that's off-screen inside a ScrollView gets scrolled into view (via `onRequestScroll` + the bundled `scrollTargetIntoView` helper)
+- ♿ **Accessible** — every step is announced to screen readers; tooltip buttons carry proper roles and labels
 
 ## Install
 
@@ -81,6 +83,7 @@ tour.start('first-run', steps)
 | `targetTimeoutMs` | `5000` | How long to wait for a step's target to mount before skipping the step |
 | `pressAdvanceDelayMs` | `150` | Delay after a `target-press` so the element's own `onPress` runs first |
 | `waitingGraceMs` | `1200` | If a step's target stays unmounted past this (user navigated away, e.g. back), the overlay hides and stops blocking touches; the tour resumes if the target reappears |
+| `dismissOnBack` | `false` | Android hardware back closes the tour (counts as skip) |
 | `renderTooltip` | built-in | `(api: TooltipApi) => ReactNode` — replace the tooltip entirely |
 | `renderExtra` | — | `(api: TooltipApi) => ReactNode` — extra content above the dim on any step (mascots, illustrations); return null for steps that need nothing |
 | `onTourStart` `onStepChange` `onTourComplete` `onTourSkip` `onStepTargetMissing` `onTargetPress` | — | Lifecycle callbacks — wire up analytics, haptics, persistence |
@@ -99,6 +102,32 @@ tour.start('first-run', steps)
 ### `useTour()`
 
 `{ start(tourId, steps, { startAt? }), stop(), next(), back(), active }` — `active` is `{ tourId, stepIndex, step, totalSteps } | null`.
+
+### `useTourTarget(id, options?)`
+
+Ref-based alternative to `<TourTarget>` — makes an existing component a target **without a wrapper View** (no layout side effects). Returns `{ ref, onLayout, onTouchEndCapture }` to spread onto the component:
+
+```tsx
+const target = useTourTarget('receipt.confirm')
+<Pressable ref={target.ref} onLayout={target.onLayout} onTouchEndCapture={target.onTouchEndCapture} …>
+```
+
+### `useTourActive(tourId?)`
+
+The currently active tour (or null), optionally scoped to one tour id — for components that only need to know whether a tour is running.
+
+### Auto-scroll
+
+When a step activates and its target measures off-screen (or zero-sized), the engine calls the target's `onRequestScroll` and re-measures once the scroll settles. Pair it with the bundled helper:
+
+```tsx
+const scrollRef = useRef<ScrollView>(null)
+const target = useTourTarget('receipt.confirm', {
+    onRequestScroll: () => scrollTargetIntoView(target.ref, scrollRef)
+})
+```
+
+(`<TourTarget onRequestScroll={…}>` works the same way.)
 
 ### Touch model
 
@@ -119,7 +148,6 @@ The library keeps no state. Persist progress yourself via callbacks:
 
 ## Known caveats
 
-- Targets inside scroll views must be on-screen when their step activates; auto-scroll is on the roadmap.
 - The overlay measures its own window offset and subtracts it from target coordinates, so status-bar/inset differences (esp. Android) are corrected automatically.
 - `onTouchEndCapture` fires on any touch release inside the target, including the end of a scroll gesture that started there. In practice targets are buttons, where this is the desired tap.
 
